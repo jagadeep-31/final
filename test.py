@@ -1,15 +1,12 @@
 
 
-
 import streamlit as st
 import xmlrpc.client
 import re
 from datetime import date
 
-
 # ---------- CONFIG ----------
 st.set_page_config(layout="wide", page_title="SBA Sprint Planning Assistant", page_icon=":clipboard:")
-
 
 st.markdown("""
     <style>
@@ -17,7 +14,6 @@ st.markdown("""
         .star-rating-table td { text-align: center; }
     </style>
     """, unsafe_allow_html=True)
-
 
 header_col1, header_col2 = st.columns([1,7])
 with header_col1:
@@ -29,14 +25,10 @@ with header_col2:
         unsafe_allow_html=True
     )
 
-
 # ------------------ CONSTANTS --------------------
 ODOO_URL = "https://sba-info-solutions-pvt-ltd.odoo.com"
 ODOO_DB = "sba-info-solutions-pvt-ltd"
-
-
 PARENT_ARTICLE_NAME = "Weekly Sprint & Performance Tracker (2025-W26-Jul 7:11)"
-
 
 CATEGORY_OPTIONS = ["R&D", "Client Projects", "Internal development"]
 ASSIGNEES = {
@@ -47,92 +39,40 @@ ASSIGNEES = {
     "Nithiyanandham": "nithiyanandham.r@sbainfo.in"
 }
 
-
 KANBAN_EXAMPLES = {
-    "Software Development": {
-        "desc": "",
-        "stages": ["Backlog", "Specification", "Development", "Tests", "Delivered"]
-    },
-    "Agile Scrum": {
-        "desc": "",
-        "stages": ["Backlog", "Sprint Backlog", "Sprint in progress", "Sprint Complete", "Old Completed Sprint"]
-    },
-    "Digital Marketing": {
-        "desc": "",
-        "stages": ["Ideas", "Researching", "Writing", "Editing", "Done"]
-    },
-    "Customer Feedback": {
-        "desc": "",
-        "stages": ["New", "In Development", "Done", "Refused"]
-    },
-    "Consulting": {
-        "desc": "",
-        "stages": ["New Projects", "Resources Allocation", "In Progress", "Done"]
-    },
-    "Research Project": {
-        "desc": "",
-        "stages": ["Brainstorm", "Research", "Draft", "Final Document"]
-    },
-    "Website Redesign": {
-        "desc": "",
-        "stages": ["Page Ideas", "Copywriting", "Design", "live"]
-    },
-    "T-shirt Printing": {
-        "desc": "",
-        "stages": ["New orders", "Logo Design", "To print", "Done"]
-    },
-    "Design": {
-        "desc": "",
-        "stages": ["New request", "Design", "Client Review", "handoff"]
-    },
-    "Publishing": {
-        "desc": "",
-        "stages": ["Ideas", "Writing", "Editing", "published"]
-    },
-    "Manufacturing": {
-        "desc": "",
-        "stages": ["New Orders", "Material Sourcing", "manufacturing", "Assembling", "Delivered"]
-    },
-    "Podcast and video production": {
-        "desc": "",
-        "stages": ["Research", "Script", "Recording", "Mixing", "Published"]
-    },
+    "Software Development": {"desc": "", "stages": ["Backlog", "Specification", "Development", "Tests", "Delivered"]},
+    "Agile Scrum": {"desc": "", "stages": ["Backlog", "Sprint Backlog", "Sprint in progress", "Sprint Complete", "Old Completed Sprint"]},
+    "Digital Marketing": {"desc": "", "stages": ["Ideas", "Researching", "Writing", "Editing", "Done"]},
+    "Customer Feedback": {"desc": "", "stages": ["New", "In Development", "Done", "Refused"]},
+    "Consulting": {"desc": "", "stages": ["New Projects", "Resources Allocation", "In Progress", "Done"]},
+    "Research Project": {"desc": "", "stages": ["Brainstorm", "Research", "Draft", "Final Document"]},
+    "Website Redesign": {"desc": "", "stages": ["Page Ideas", "Copywriting", "Design", "live"]},
+    "T-shirt Printing": {"desc": "", "stages": ["New orders", "Logo Design", "To print", "Done"]},
+    "Design": {"desc": "", "stages": ["New request", "Design", "Client Review", "handoff"]},
+    "Publishing": {"desc": "", "stages": ["Ideas", "Writing", "Editing", "published"]},
+    "Manufacturing": {"desc": "", "stages": ["New Orders", "Material Sourcing", "manufacturing", "Assembling", "Delivered"]},
+    "Podcast and video production": {"desc": "", "stages": ["Research", "Script", "Recording", "Mixing", "Published"]},
 }
 
-
-MEMBER_NAMES = [
-    "Srihari", "Hari R", "Ajith", "Jagadeep", "Nithiyanandham", "Sadeesh", "Venkatesh"
-]
-
-
-# ------------ DEFINE ensure_stages_for_project -------------
-def ensure_stages_for_project(uid, models, project_id, stages):
-    existing_stages = models.execute_kw(
-        ODOO_DB, uid, st.session_state['odoo_pass'],
-        'project.task.type', 'search_read',
-        [[['project_ids', 'in', [project_id]]]],
-        {'fields': ['id', 'name'], 'order': 'sequence ASC'}
-    )
-    existing_names = {s['name'] for s in existing_stages}
-    for stage_name in stages:
-        if stage_name not in existing_names:
-            global_stage = models.execute_kw(
-                ODOO_DB, uid, st.session_state['odoo_pass'],
-                'project.task.type', 'search', [[['name', '=', stage_name], ['project_ids', '=', False]]]
-            )
-            if global_stage:
-                models.execute_kw(
-                    ODOO_DB, uid, st.session_state['odoo_pass'],
-                    'project.task.type', 'write', [[global_stage[0]], {'project_ids': [(4, project_id)]}]
-                )
-            else:
-                models.execute_kw(
-                    ODOO_DB, uid, st.session_state['odoo_pass'],
-                    'project.task.type', 'create',
-                    [{'name': stage_name, 'project_ids': [(4, project_id)]}]
-                )
+MEMBER_NAMES = ["Srihari", "Hari R", "Ajith", "Jagadeep", "Nithiyanandham", "Sadeesh", "Venkatesh"]
 
 # ---------------- TEMPLATES ------------------
+TASK_DESCRIPTION_TEMPLATE = """**User Story:**
+As a [user role], I want to [goal] so that I can [benefit].
+
+**System Story:**
+As an engineer, I need to [technical goal] so that [technical outcome].
+
+**Acceptance Criteria:**
+- [ ] Criterion 1
+- [ ] Criterion 2
+- [ ] Criterion 3
+
+**Sub-goals / Tasks:**
+- [ ] Sub-task 1
+- [ ] Sub-task 2
+"""
+
 PERFORMANCE_TEMPLATE = """ 
 <div style="font-family: Arial, sans-serif;">
 <h1 style="color:#0263e0;margin-bottom:0;">Weekly Sprint Performance Tracker</h1>
@@ -180,78 +120,14 @@ PERFORMANCE_TEMPLATE = """
     <th style="border:1px solid #222;">Est. Points</th>
     <th style="border:1px solid #222;">Status</th>
   </tr>
-  <tr>
-    <td style="border:1px solid #aaa;">T-01</td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;">To Do</td>
-  </tr>
-  <tr>
-    <td style="border:1px solid #aaa;">T-02</td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;">To Do</td>
-  </tr>
-  <tr>
-    <td style="border:1px solid #aaa;">T-03</td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;">To Do</td>
-  </tr>
-  <tr>
-    <td style="border:1px solid #aaa;">T-04</td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;">To Do</td>
-  </tr>
-  <tr>
-    <td style="border:1px solid #aaa;">T-05</td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;">To Do</td>
-  </tr>
-  <tr>
-    <td style="border:1px solid #aaa;">T-06</td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;">To Do</td>
-  </tr>
-  <tr>
-    <td style="border:1px solid #aaa;">T-07</td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;">To Do</td>
-  </tr>
-  <tr>
-    <td style="border:1px solid #aaa;">T-08</td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;"></td>
-    <td style="border:1px solid #aaa;">To Do</td>
-  </tr>
+  <tr><td style="border:1px solid #aaa;">T-01</td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;">To Do</td></tr>
+  <tr><td style="border:1px solid #aaa;">T-02</td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;">To Do</td></tr>
+  <tr><td style="border:1px solid #aaa;">T-03</td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;">To Do</td></tr>
+  <tr><td style="border:1px solid #aaa;">T-04</td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;">To Do</td></tr>
+  <tr><td style="border:1px solid #aaa;">T-05</td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;">To Do</td></tr>
+  <tr><td style="border:1px solid #aaa;">T-06</td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;">To Do</td></tr>
+  <tr><td style="border:1px solid #aaa;">T-07</td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;">To Do</td></tr>
+  <tr><td style="border:1px solid #aaa;">T-08</td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;"></td><td style="border:1px solid #aaa;">To Do</td></tr>
 </table>
 <div style="height:32px;"></div>
 <h2 style="color:#0263e0; margin:32px 0 16px 0;">Part C: Daily Developer Progress Notes</h2>
@@ -265,32 +141,32 @@ PERFORMANCE_TEMPLATE = """
   <tr>
     <td style="border:1px solid #aaa;">Monday</td>
     <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1. ajith<br>2. jagadeep <br>3. Nithiyanandham<br>4. Srihari<br>5. Hari<br></td>
-    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.<br>
-    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.<b>
+    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.<br></td>
+    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.</td>
   </tr>
   <tr>
     <td style="border:1px solid #aaa;">Tuesday</td>
     <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1. ajith<br>2. jagadeep <br>3. Nithiyanandham<br>4. Srihari<br>5. Hari<br></td>
-    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.<br>
-    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.<b
+    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.<br></td>
+    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.</td>
   </tr>
   <tr>
     <td style="border:1px solid #aaa;">Wednesday</td>
     <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1. ajith<br>2. jagadeep <br>3. Nithiyanandham<br>4. Srihari<br>5. Hari<br></td>
-    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.<br>
-    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.<b
+    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.<br></td>
+    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.</td>
   </tr>
   <tr>
     <td style="border:1px solid #aaa;">Thursday</td>
     <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1. ajith<br>2. jagadeep <br>3. Nithiyanandham<br>4. Srihari<br>5. Hari<br></td>
-    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.<br>
-    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.<b
+    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.<br></td>
+    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.</td>
   </tr>
   <tr>
     <td style="border:1px solid #aaa;">Friday</td>
     <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1. ajith<br>2. jagadeep <br>3. Nithiyanandham<br>4. Srihari<br>5. Hari<br></td>
-    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.<br>
-    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.<b
+    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.<br></td>
+    <td style="border:1px solid #aaa; vertical-align: top; padding: 12px;">1.<br>2.<br>3.<br>4.<br>5.</td>
   </tr>
 </table>
 <div style="height:32px;"></div>
@@ -448,6 +324,32 @@ SPRINT_TEMPLATE = """
 </div>
 """
 
+def ensure_stages_for_project(uid, models, project_id, stages):
+    existing_stages = models.execute_kw(
+        ODOO_DB, uid, st.session_state['odoo_pass'],
+        'project.task.type', 'search_read',
+        [[['project_ids', 'in', [project_id]]]],
+        {'fields': ['id', 'name'], 'order': 'sequence ASC'}
+    )
+    existing_names = {s['name'] for s in existing_stages}
+    for stage_name in stages:
+        if stage_name not in existing_names:
+            global_stage = models.execute_kw(
+                ODOO_DB, uid, st.session_state['odoo_pass'],
+                'project.task.type', 'search', [[['name', '=', stage_name], ['project_ids', '=', False]]]
+            )
+            if global_stage:
+                models.execute_kw(
+                    ODOO_DB, uid, st.session_state['odoo_pass'],
+                    'project.task.type', 'write', [[global_stage[0]], {'project_ids': [(4, project_id)]}]
+                )
+            else:
+                models.execute_kw(
+                    ODOO_DB, uid, st.session_state['odoo_pass'],
+                    'project.task.type', 'create',
+                    [{'name': stage_name, 'project_ids': [(4, project_id)]}]
+                )
+
 def odoo_connect():
     login = st.session_state.get("odoo_login")
     pw = st.session_state.get("odoo_pass")
@@ -575,7 +477,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
     with st.expander("Project Details", expanded=True):
         proj_name = st.text_input("Project Name")
         proj_category = st.selectbox("Project Kanban Column", CATEGORY_OPTIONS)
-        proj_desc = st.text_area(" Overall Project Description")
+        proj_desc = st.text_area("Overall Project Description")
         if st.button("Create Project"):
             description_html = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', proj_desc).replace('\n', '<br>')
             stage_ids = models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'project.project.stage', 'search', [[['name', '=', proj_category]]])
@@ -603,7 +505,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
 
         with st.form("add_task_existing_project"):
             task_title = st.text_input("Task Title", key="task_title_existing")
-            task_desc = st.text_area("Task Description", key="task_desc_existing")
+            task_desc = st.text_area("Task Description", key="task_desc_existing", height=250, value=TASK_DESCRIPTION_TEMPLATE)
             subtasks_text = st.text_area("Subtasks (one per line, optional)", key="subtasks_existing", help="Enter one subtask per line")
             tags = st.text_input("Tags (comma-separated)", key="task_tags_existing")
             assignees_selected = st.multiselect("Assign Task To", list(ASSIGNEES.keys()), key="task_assignees_existing")
@@ -626,7 +528,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                 task_vals = {
                     "name": task_title,
                     "project_id": sel_project_id,
-                    "description": task_desc,
+                    "description": re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', task_desc).replace('\n', '<br>'),
                     "tag_ids": [(6, 0, tag_ids)] if tag_ids else [],
                     "user_ids": [(6, 0, user_ids)] if user_ids else [],
                 }
@@ -634,7 +536,6 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                     task_vals["stage_id"] = stage_id
                 task_id = models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'project.task', 'create', [task_vals])
                 
-                # Create Subtasks
                 subtask_lines = [line.strip() for line in subtasks_text.split("\n") if line.strip()]
                 for subtask_line in subtask_lines:
                     subtask_vals = {
@@ -655,7 +556,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
         
         with st.form("task_form"):
             task_title = st.text_input("Task Title", key="task_title_newproj")
-            task_desc = st.text_area("Task Description", key="task_desc_newproj")
+            task_desc = st.text_area("Task Description", key="task_desc_newproj", height=250, value=TASK_DESCRIPTION_TEMPLATE)
             subtasks_text_new = st.text_area("Subtasks (one per line, optional)", key="subtasks_new", help="Enter one subtask per line")
             tags = st.text_input("Tags (comma-separated)", key="task_tags_newproj")
             assignees_selected = st.multiselect("Assign Task To", list(ASSIGNEES.keys()), key="task_assignees_newproj")
@@ -681,7 +582,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                 task_vals = {
                     "name": task_title,
                     "project_id": st.session_state['project_id'],
-                    "description": task_desc,
+                    "description": re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', task_desc).replace('\n', '<br>'),
                     "tag_ids": [(6, 0, tag_ids)] if tag_ids else [],
                     "user_ids": [(6, 0, user_ids)] if user_ids else [],
                 }
@@ -689,7 +590,6 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                     task_vals["stage_id"] = stage_id
                 task_id = models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'project.task', 'create', [task_vals])
                 
-                # Create Subtasks
                 subtask_lines = [line.strip() for line in subtasks_text_new.split("\n") if line.strip()]
                 for subtask_line in subtask_lines:
                     subtask_vals = {
@@ -721,4 +621,5 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                                                         '') if task_stage_id else ''
                     if task_stage_name == stage_name and not task.get('parent_id'):
                         st.markdown(f"- {task['name']}")
+
 
