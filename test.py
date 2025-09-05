@@ -1,15 +1,20 @@
+
+
 import streamlit as st
 import xmlrpc.client
 import re
 from datetime import date
+
 # ---------- CONFIG ----------
 st.set_page_config(layout="wide", page_title="SBA Sprint Planning Assistant", page_icon=":clipboard:")
+
 st.markdown("""
     <style>
         .section-header { color: #0263e0; font-weight: 650; }
         .star-rating-table td { text-align: center; }
     </style>
     """, unsafe_allow_html=True)
+
 header_col1, header_col2 = st.columns([1,7])
 with header_col1:
     st.image("sba logo.jpg", width=110)
@@ -19,10 +24,12 @@ with header_col2:
         "<div style='color:#0263e0;font-weight:500;font-size:1.09em;margin-bottom: 25px;'>Automate The Mundane</div>",
         unsafe_allow_html=True
     )
+
 # ------------------ CONSTANTS --------------------
 ODOO_URL = "https://sba-info-solutions-pvt-ltd.odoo.com"
 ODOO_DB = "sba-info-solutions-pvt-ltd"
 PARENT_ARTICLE_NAME = "Weekly Sprint & Performance Tracker (2025-W26-Jul 7:11)"
+
 CATEGORY_OPTIONS = ["R&D", "Client Projects", "Internal development"]
 ASSIGNEES = {
     "Jagadeep": "jagadeep.k@sbainfo.in",
@@ -31,6 +38,7 @@ ASSIGNEES = {
     "Ajith Kumar": "ajithkumar.r@sbainfo.in",
     "Nithiyanandham": "nithiyanandham.r@sbainfo.in"
 }
+
 KANBAN_EXAMPLES = {
     "Software Development": {"desc": "", "stages": ["Backlog", "Specification", "Development", "Tests", "Delivered"]},
     "Agile Scrum": {"desc": "", "stages": ["Backlog", "Sprint Backlog", "Sprint in progress", "Sprint Complete", "Old Completed Sprint"]},
@@ -45,20 +53,26 @@ KANBAN_EXAMPLES = {
     "Manufacturing": {"desc": "", "stages": ["New Orders", "Material Sourcing", "manufacturing", "Assembling", "Delivered"]},
     "Podcast and video production": {"desc": "", "stages": ["Research", "Script", "Recording", "Mixing", "Published"]},
 }
+
 MEMBER_NAMES = ["Srihari", "Hari R", "Ajith", "Jagadeep", "Nithiyanandham", "Sadeesh", "Venkatesh"]
+
 # ---------------- TEMPLATES ------------------
 TASK_DESCRIPTION_TEMPLATE = """**User Story:**
 As a [user role], I want to [goal] so that I can [benefit].
+
 **System Story:**
 As an engineer, I need to [technical goal] so that [technical outcome].
+
 **Acceptance Criteria:**
 - [ ] Criterion 1
 - [ ] Criterion 2
 - [ ] Criterion 3
+
 **Sub-goals / Tasks:**
 - [ ] Sub-task 1
 - [ ] Sub-task 2
 """
+
 PERFORMANCE_TEMPLATE = """ 
 <div style="font-family: Arial, sans-serif;">
 <h1 style="color:#0263e0;margin-bottom:0;">Weekly Sprint Performance Tracker</h1>
@@ -227,6 +241,7 @@ PERFORMANCE_TEMPLATE = """
 </table>
 </div>
 """
+
 SPRINT_DIFFICULTY_TABLE = """
 <table border="1" cellpadding="14" cellspacing="0" style="border-collapse:collapse; width:88%; margin:18px 0 20px 0; font-size:1.23em;">
   <thead style="background:#f7f7f7;">
@@ -236,15 +251,16 @@ SPRINT_DIFFICULTY_TABLE = """
     </tr>
   </thead>
   <tbody>
-    <tr><td style="padding:20px 18px;">Change 1</td><td style="text-align:center; font-size:2em; color:#ccc;">☆☆☆☆☆</td></tr>
-    <tr><td style="padding:20px 18px;">Change 2</td><td style="text-align:center; font-size:2em; color:#ccc;">☆☆☆☆☆</td></tr>
-    <tr><td style="padding:20px 18px;">Change 3</td><td style="text-align:center; font-size:2em; color:#ccc;">☆☆☆☆☆</td></tr>
-    <tr><td style="padding:20px 18px;">Change 4</td><td style="text-align:center; font-size:2em; color:#ccc;">☆☆☆☆☆</td></tr>
-    <tr><td style="padding:20px 18px;">Change 5</td><td style="text-align:center; font-size:2em; color:#ccc;">☆☆☆☆☆</td></tr>
-    <tr><td style="padding:20px 18px;">Change 6</td><td style="text-align:center; font-size:2em; color:#ccc;">☆☆☆☆☆</td></tr>
+    <tr><td style="padding:20px 18px;">Change 1</td><td style="text-align:center; font-size:2em; color:#ccc;">&#9734;&#9734;&#9734;&#9734;&#9734;</td></tr>
+    <tr><td style="padding:20px 18px;">Change 2</td><td style="text-align:center; font-size:2em; color:#ccc;">&#9734;&#9734;&#9734;&#9734;&#9734;</td></tr>
+    <tr><td style="padding:20px 18px;">Change 3</td><td style="text-align:center; font-size:2em; color:#ccc;">&#9734;&#9734;&#9734;&#9734;&#9734;</td></tr>
+    <tr><td style="padding:20px 18px;">Change 4</td><td style="text-align:center; font-size:2em; color:#ccc;">&#9734;&#9734;&#9734;&#9734;&#9734;</td></tr>
+    <tr><td style="padding:20px 18px;">Change 5</td><td style="text-align:center; font-size:2em; color:#ccc;">&#9734;&#9734;&#9734;&#9734;&#9734;</td></tr>
+    <tr><td style="padding:20px 18px;">Change 6</td><td style="text-align:center; font-size:2em; color:#ccc;">&#9734;&#9734;&#9734;&#9734;&#9734;</td></tr>
   </tbody>
 </table>
 """
+
 def build_final_retro_html():
     questions = [
         "On a scale of 1 to 5, how do you feel about your role in the company?",
@@ -262,6 +278,7 @@ def build_final_retro_html():
             html += f"<li style='min-height:25px;'><b>{i}.</b> &nbsp;</li>"
         html += "</ul>"
     return html
+
 SPRINT_TEMPLATE = """
 <div style='font-family: Arial, sans-serif; line-height: 1.75; padding-bottom:20px;'>
   <h1 style='color: #C03; font-size:2.15em; font-weight: bold;'>✍️ Sprint Review & Retrospective</h1>
@@ -306,6 +323,7 @@ SPRINT_TEMPLATE = """
   </div>
 </div>
 """
+
 def ensure_stages_for_project(uid, models, project_id, stages):
     existing_stages = models.execute_kw(
         ODOO_DB, uid, st.session_state['odoo_pass'],
@@ -331,6 +349,7 @@ def ensure_stages_for_project(uid, models, project_id, stages):
                     'project.task.type', 'create',
                     [{'name': stage_name, 'project_ids': [(4, project_id)]}]
                 )
+
 def odoo_connect():
     login = st.session_state.get("odoo_login")
     pw = st.session_state.get("odoo_pass")
@@ -344,24 +363,30 @@ def odoo_connect():
         st.stop()
     st.session_state["login_success"] = True
     return uid, models
+
 # ------------------ APP WORKFLOW STARTS HERE ---------------------
+
 st.markdown("<h3 class='section-header'>🔐 Login to Odoo</h3>", unsafe_allow_html=True)
 st.text_input("Odoo Username or Email (login)", key="odoo_login")
 st.text_input("Odoo Password", type="password", key="odoo_pass")
+
 if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
     uid, models = odoo_connect()
     st.success(f"✅ Login successful! Welcome, {st.session_state['odoo_login']}")
+
     st.markdown("<h3 class='section-header'>📈 Create Weekly Sprint Performance Tracker Article</h3>", unsafe_allow_html=True)
     with st.form("create_perf_tracker_form"):
         perf_sprint_no = st.text_input("Sprint Number (e.g., W29)", value=f"W{date.today().isocalendar()[1]}")
         perf_date_range = st.text_input("Sprint Dates (e.g., Jul28:Aug1)", value="")
         perf_article_name = st.text_input("Article Title", value=f"Weekly Sprint Performance Tracker (2025-{perf_sprint_no}-{perf_date_range})")
         perf_submitted = st.form_submit_button("Create Weekly Tracker")
+
     parent_id_list = models.execute_kw(
         ODOO_DB, uid, st.session_state["odoo_pass"],
         'knowledge.article', 'search',
         [[['name', '=', PARENT_ARTICLE_NAME]]]
     )
+
     if perf_submitted:
         if parent_id_list:
             parent_id = parent_id_list[0]
@@ -389,6 +414,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                     st.error(f"Failed to create tracker: {e}")
         else:
             st.error(f"Parent Knowledge Article '{PARENT_ARTICLE_NAME}' not found! Please create it in Odoo.")
+
     st.markdown("<h3 class='section-header'>🚀 Create Sprint Review & Retrospective Article</h3>", unsafe_allow_html=True)
     with st.form("create_sprint_review_form"):
         sprint_date = st.date_input("Sprint Date", value=date.today())
@@ -396,6 +422,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
         sprint_article_name = st.text_input("Sprint Review Article Title",
                                             value=f"✍️Sprint Review & Retrospective ({sprint_date.isoformat()}) [#{sprint_num}]")
         submitted_sprint = st.form_submit_button("Create Sprint Review Template")
+
     if submitted_sprint:
         if parent_id_list:
             parent_id = parent_id_list[0]
@@ -429,6 +456,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                     st.error(f"Error creating the sprint review article: {e}")
         else:
             st.error(f"Parent Knowledge Article '{PARENT_ARTICLE_NAME}' not found! Please create it in Odoo.")
+
     # ---- Fetch projects for project/task management ----
     project_list = models.execute_kw(
         ODOO_DB, uid, st.session_state["odoo_pass"],
@@ -437,11 +465,13 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
         {"fields": ["id", "name"]}
     )
     project_options = {proj["name"]: proj["id"] for proj in project_list}
+
     # ---- Kanban Example Selector ----
     st.markdown("## Kanban Examples")
     kanban_options = list(KANBAN_EXAMPLES.keys())
     selected_kanban = st.radio("Choose a Kanban Example", kanban_options, horizontal=True)
     kanban_example = KANBAN_EXAMPLES[selected_kanban]
+
     # ---- Project Creator ----
     st.markdown('<h3 class="section-header">Create New Project</h3>', unsafe_allow_html=True)
     with st.expander("Project Details", expanded=True):
@@ -449,7 +479,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
         proj_category = st.selectbox("Project Kanban Column", CATEGORY_OPTIONS)
         proj_desc = st.text_area("Overall Project Description")
         if st.button("Create Project"):
-            description_html = re.sub(r'**(.+?)**', r'<b>\1</b>', proj_desc).replace('\n', '<br>')
+            description_html = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', proj_desc).replace('\n', '<br>')
             stage_ids = models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'project.project.stage', 'search', [[['name', '=', proj_category]]])
             project_vals = {'name': proj_name, 'active': True, 'description': description_html}
             if stage_ids:
@@ -459,6 +489,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
             st.session_state.update({'project_id': project_id, 'project_name': proj_name,
                                      'kanban_stages': kanban_example["stages"], 'selected_kanban': selected_kanban})
             st.success(f"Project '{proj_name}' created with Kanban '{selected_kanban}'.")
+
     # ---- Add Task to Existing Project (with Subtasks)----
     st.markdown("<h3 class='section-header'>Add Task to Existing Project</h3>", unsafe_allow_html=True)
     with st.expander("Select Project to Add Task", expanded=True):
@@ -471,6 +502,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
             {'fields': ['id', 'name'], 'order': 'sequence ASC'}
         )
         sel_stages_names = [stage["name"] for stage in sel_project_stages] if sel_project_stages else kanban_example["stages"]
+
         with st.form("add_task_existing_project"):
             task_title = st.text_input("Task Title", key="task_title_existing")
             task_desc = st.text_area("Task Description", key="task_desc_existing", height=250, value=TASK_DESCRIPTION_TEMPLATE)
@@ -496,7 +528,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                 task_vals = {
                     "name": task_title,
                     "project_id": sel_project_id,
-                    "description": re.sub(r'**(.+?)**', r'<b>\1</b>', task_desc).replace('\n', '<br>'),
+                    "description": re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', task_desc).replace('\n', '<br>'),
                     "tag_ids": [(6, 0, tag_ids)] if tag_ids else [],
                     "user_ids": [(6, 0, user_ids)] if user_ids else [],
                 }
@@ -511,15 +543,12 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                         "project_id": sel_project_id,
                         "parent_id": task_id,
                         "stage_id": stage_id if stage_id else False,
-                        "user_ids": [(6, 0, user_ids)] if user_ids else [],  # **ASSIGNEE FIX**
                     }
-                    models.execute_kw(
-                        ODOO_DB, uid, st.session_state['odoo_pass'],
-                        'project.task', 'create', [subtask_vals]
-                    )
+                    models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'project.task', 'create', [subtask_vals])
                 
                 st.success(f"Task '{task_title}' created in project '{sel_project_name}' with {len(subtask_lines)} subtasks.")
                 st.rerun()
+
     # ---- Add Tasks to Current/Newly Created Project (with Subtasks) ----
     if 'project_id' in st.session_state:
         st.markdown(f'<h3 class="section-header">Add Tasks to Project: {st.session_state["project_name"]}</h3>', unsafe_allow_html=True)
@@ -553,7 +582,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                 task_vals = {
                     "name": task_title,
                     "project_id": st.session_state['project_id'],
-                    "description": re.sub(r'**(.+?)**', r'<b>\1</b>', task_desc).replace('\n', '<br>'),
+                    "description": re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', task_desc).replace('\n', '<br>'),
                     "tag_ids": [(6, 0, tag_ids)] if tag_ids else [],
                     "user_ids": [(6, 0, user_ids)] if user_ids else [],
                 }
@@ -568,12 +597,8 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                         "project_id": st.session_state['project_id'],
                         "parent_id": task_id,
                         "stage_id": stage_id if stage_id else False,
-                        "user_ids": [(6, 0, user_ids)] if user_ids else [],  # **ASSIGNEE FIX**
                     }
-                    models.execute_kw(
-                        ODOO_DB, uid, st.session_state['odoo_pass'],
-                        'project.task', 'create', [subtask_vals]
-                    )
+                    models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'project.task', 'create', [subtask_vals])
                 
                 st.success(f"Task '{task_title}' created in stage '{kanban_stage}' with {len(subtask_lines)} subtasks.")
                 st.rerun()
@@ -596,3 +621,6 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                                                         '') if task_stage_id else ''
                     if task_stage_name == stage_name and not task.get('parent_id'):
                         st.markdown(f"- {task['name']}")
+
+
+
