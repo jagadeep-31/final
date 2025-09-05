@@ -511,7 +511,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                         "project_id": sel_project_id,
                         "parent_id": task_id,
                         "stage_id": stage_id if stage_id else False,
-                        "user_ids": [(6, 0, user_ids)] if user_ids else [],  # --- ASSIGNEE FIX ---
+                        "user_ids": [(6, 0, user_ids)] if user_ids else [],  # **ASSIGNEE FIX**
                     }
                     models.execute_kw(
                         ODOO_DB, uid, st.session_state['odoo_pass'],
@@ -568,7 +568,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                         "project_id": st.session_state['project_id'],
                         "parent_id": task_id,
                         "stage_id": stage_id if stage_id else False,
-                        "user_ids": [(6, 0, user_ids)] if user_ids else [],  # --- ASSIGNEE FIX ---
+                        "user_ids": [(6, 0, user_ids)] if user_ids else [],  # **ASSIGNEE FIX**
                     }
                     models.execute_kw(
                         ODOO_DB, uid, st.session_state['odoo_pass'],
