@@ -466,12 +466,6 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
     )
     project_options = {proj["name"]: proj["id"] for proj in project_list}
 
-    # ---- Kanban Example Selector ----
-    st.markdown("## Kanban Examples")
-    kanban_options = list(KANBAN_EXAMPLES.keys())
-    selected_kanban = st.radio("Choose a Kanban Example", kanban_options, horizontal=True)
-    kanban_example = KANBAN_EXAMPLES[selected_kanban]
-
     # ---- Project Creator ----
     st.markdown('<h3 class="section-header">Create New Project</h3>', unsafe_allow_html=True)
     with st.expander("Project Details", expanded=True):
@@ -485,6 +479,12 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
             if stage_ids:
                 project_vals['stage_id'] = stage_ids[0]
             project_id = models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'project.project', 'create', [project_vals])
+               # ---- Kanban Example Selector ----
+                st.markdown("## Kanban Examples")
+                kanban_options = list(KANBAN_EXAMPLES.keys())
+                selected_kanban = st.radio("Choose a Kanban Example", kanban_options, horizontal=True)
+                kanban_example = KANBAN_EXAMPLES[selected_kanban]
+
             ensure_stages_for_project(uid, models, project_id, kanban_example["stages"])
             st.session_state.update({'project_id': project_id, 'project_name': proj_name,
                                      'kanban_stages': kanban_example["stages"], 'selected_kanban': selected_kanban})
@@ -621,6 +621,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                                                         '') if task_stage_id else ''
                     if task_stage_name == stage_name and not task.get('parent_id'):
                         st.markdown(f"- {task['name']}")
+
 
 
 
