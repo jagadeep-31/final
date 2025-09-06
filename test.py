@@ -95,7 +95,7 @@ PERFORMANCE_TEMPLATE = """
   </tr>
   <tr>
     <td style="border:1px solid #aaa;"><b>Team Name</b></td>
-    <td style="border:1px solid #aaa;"></td>
+    <td style="border:1px solid #aaa;">The cheetahs</td>
   </tr>
   <tr>
     <td style="border:1px solid #aaa;"><b>Sprint Goal</b></td>
@@ -621,6 +621,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                                                         '') if task_stage_id else ''
                     if task_stage_name == stage_name and not task.get('parent_id'):
                         st.markdown(f"- {task['name']}")
+
 
 
 
