@@ -493,8 +493,17 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
     # ---- Add Task to Existing Project (with Subtasks)----
     st.markdown("<h3 class='section-header'>Add Task to Existing Project</h3>", unsafe_allow_html=True)
     with st.expander("Select Project to Add Task", expanded=True):
-        sel_project_name = st.selectbox("Select Existing Project", list(project_options.keys()))
-        sel_project_id = project_options[sel_project_name]
+    # Add this filtering line to exclude ongoing projects
+    ongoing_project_names = [
+        "User centric use case (copy)",
+        "Voice Bot Demo For Tally",
+        "Wave Infra",
+        "FOX MANDEL POC",
+        "5C Network Poc"
+    ]
+    filtered_project_options = {k: v for k, v in project_options.items() if k not in ongoing_project_names}
+        sel_project_name = st.selectbox("Select Existing Project", list(filtered_project_options.keys()))
+        sel_project_id = filtered_project_options[sel_project_name]
         sel_project_stages = models.execute_kw(
             ODOO_DB, uid, st.session_state['odoo_pass'],
             'project.task.type', 'search_read',
@@ -621,6 +630,7 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                                                         '') if task_stage_id else ''
                     if task_stage_name == stage_name and not task.get('parent_id'):
                         st.markdown(f"- {task['name']}")
+
 
 
 
