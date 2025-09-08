@@ -493,67 +493,61 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
      # ---- Add Task to Existing Project (with Subtasks)----
     st.markdown("<h3 class='section-header'>Add Task to Existing Project</h3>", unsafe_allow_html=True)
     with st.expander("Select Project to Add Task", expanded=True):
-        # Define ongoing projects to omit
-        ongoing_project_names = [
-            "User centric use case (copy)",
-            "Voice Bot Demo For Tally",
-            "Wave Infra",
-            "FOX MANDEL POC",
-            "5C Network Poc"
-        ]
-        # Filter out ongoing projects from the project_options dictionary
-    filtered_project_options = {k: v for k, v in project_options.items() if k not in ongoing_project_names}
-    sel_project_name = st.selectbox("Select Existing Project", list(filtered_project_options.keys()))
-    sel_project_id = filtered_project_options[sel_project_name]
-    sel_project_stages = models.execute_kw(
-        ODOO_DB, uid, st.session_state['odoo_pass'],
-        'project.task.type', 'search_read',
-        [[['project_ids', 'in', [sel_project_id]]]],
-        {'fields': ['id', 'name'], 'order': 'sequence ASC'}
-    )
-    sel_stages_names = [stage["name"] for stage in sel_project_stages] if sel_project_stages else kanban_example["stages"]
-    with st.form("add_task_existing_project"):
-        task_title = st.text_input("Task Title", key="task_title_existing")
-        task_desc = st.text_area("Task Description", key="task_desc_existing", height=250, value=TASK_DESCRIPTION_TEMPLATE)
-        subtasks_text = st.text_area("Subtasks (one per line, optional)", key="subtasks_existing", help="Enter one subtask per line")
-        tags = st.text_input("Tags (comma-separated)", key="task_tags_existing")
-        assignees_selected = st.multiselect("Assign Task To", list(ASSIGNEES.keys()), key="task_assignees_existing")
-        kanban_stage = st.selectbox("Select Stage / Column", sel_stages_names, key="task_stage_existing")
-        submitted_existing = st.form_submit_button("Add Task to Existing Project")
-        if submitted_existing:
-            tag_ids = []
-            for tag in tags.split(","):
-                tag = tag.strip()
-                if tag:
-                    tag_id = models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'project.tags', 'search', [[['name', '=', tag]]])
-                    if not tag_id:
-                        tag_id = [models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'project.tags', 'create', [{'name': tag}])]
+        sel_project_name = st.selectbox("Select Existing Project", list(project_options.keys()))
+        sel_project_id = project_options[sel_project_name]
+        sel_project_stages = models.execute_kw(
+            ODOO_DB, uid, st.session_state['odoo_pass'],
+            'project.task.type', 'search_read',
+            [[['project_ids', 'in', [sel_project_id]]]],
+            {'fields': ['id', 'name'], 'order': 'sequence ASC'}
+        )
+        sel_stages_names = [stage["name"] for stage in sel_project_stages] if sel_project_stages else kanban_example["stages"]
+
+        with st.form("add_task_existing_project"):
+            task_title = st.text_input("Task Title", key="task_title_existing")
+            task_desc = st.text_area("Task Description", key="task_desc_existing", height=250, value=TASK_DESCRIPTION_TEMPLATE)
+            subtasks_text = st.text_area("Subtasks (one per line, optional)", key="subtasks_existing", help="Enter one subtask per line")
+            tags = st.text_input("Tags (comma-separated)", key="task_tags_existing")
+            assignees_selected = st.multiselect("Assign Task To", list(ASSIGNEES.keys()), key="task_assignees_existing")
+            kanban_stage = st.selectbox("Select Stage / Column", sel_stages_names, key="task_stage_existing")
+            submitted_existing = st.form_submit_button("Add Task to Existing Project")
+            
+            if submitted_existing:
+                tag_ids = []
+                for tag in tags.split(","):
+                    tag = tag.strip()
+                    if tag:
+                        tag_id = models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'project.tags', 'search', [[['name', '=', tag]]])
+                        if not tag_id:
+                            tag_id = [models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'project.tags', 'create', [{'name': tag}])]
                         tag_ids.append(tag_id[0])
-                        user_ids = [models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'res.users', 'search', [[['login', '=', ASSIGNEES[name]]]])[0]
-                                    for name in assignees_selected if name in ASSIGNEES]
-                        project_stages = sel_project_stages
-                        stage_id = next((stage['id'] for stage in project_stages if stage['name'] == kanban_stage), None)
-                        task_vals = {
-                            "name": task_title,
-                            "project_id": sel_project_id,
-                            "description": re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', task_desc).replace('\n', '<br>'),
-                            "tag_ids": [(6, 0, tag_ids)] if tag_ids else [],
-                            "user_ids": [(6, 0, user_ids)] if user_ids else [],
-                        }
-                        if stage_id:
-                            task_vals["stage_id"] = stage_id
-                            task_id = models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'project.task', 'create', [task_vals])
-                            subtask_lines = [line.strip() for line in subtasks_text.split("\n") if line.strip()]
-                            for subtask_line in subtask_lines:
-                                subtask_vals = {
-                                    "name": subtask_line,
-                                    "project_id": sel_project_id,
-                                    "parent_id": task_id,
-                                    "stage_id": stage_id if stage_id else False,
-                                }
-                                models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'project.task', 'create', [subtask_vals])
-                                st.success(f"Task '{task_title}' created in project '{sel_project_name}' with {len(subtask_lines)} subtasks.")
-                                st.rerun()
+                user_ids = [models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'res.users', 'search', [[['login', '=', ASSIGNEES[name]]]])[0]
+                            for name in assignees_selected if name in ASSIGNEES]
+                project_stages = sel_project_stages
+                stage_id = next((stage['id'] for stage in project_stages if stage['name'] == kanban_stage), None)
+                task_vals = {
+                    "name": task_title,
+                    "project_id": sel_project_id,
+                    "description": re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', task_desc).replace('\n', '<br>'),
+                    "tag_ids": [(6, 0, tag_ids)] if tag_ids else [],
+                    "user_ids": [(6, 0, user_ids)] if user_ids else [],
+                }
+                if stage_id:
+                    task_vals["stage_id"] = stage_id
+                task_id = models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'project.task', 'create', [task_vals])
+                
+                subtask_lines = [line.strip() for line in subtasks_text.split("\n") if line.strip()]
+                for subtask_line in subtask_lines:
+                    subtask_vals = {
+                        "name": subtask_line,
+                        "project_id": sel_project_id,
+                        "parent_id": task_id,
+                        "stage_id": stage_id if stage_id else False,
+                    }
+                    models.execute_kw(ODOO_DB, uid, st.session_state['odoo_pass'], 'project.task', 'create', [subtask_vals])
+                
+                st.success(f"Task '{task_title}' created in project '{sel_project_name}' with {len(subtask_lines)} subtasks.")
+                st.rerun()
 
     # ---- Add Tasks to Current/Newly Created Project (with Subtasks) ----
     if 'project_id' in st.session_state:
@@ -627,7 +621,6 @@ if st.session_state.get("odoo_login") and st.session_state.get("odoo_pass"):
                                                         '') if task_stage_id else ''
                     if task_stage_name == stage_name and not task.get('parent_id'):
                         st.markdown(f"- {task['name']}")
-
 
 
 
